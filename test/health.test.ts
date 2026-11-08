@@ -1,9 +1,20 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
 import { loadEnv } from "../src/config/env.js";
 
 describe("GET /health", () => {
-  const app = buildApp(loadEnv({ NODE_ENV: "test", INSTANCE_ID: "test-a" }));
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    const env = loadEnv({
+      NODE_ENV: "test",
+      INSTANCE_ID: "test-a",
+      DATABASE_URL: "postgresql://unused",
+      JWT_ACCESS_SECRET: "test-secret-with-at-least-32-characters",
+    });
+    app = await buildApp({ env, routes: () => undefined, interceptors: [] });
+  });
 
   afterAll(() => app.close());
 
