@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package pulso.v1;
+
+import "pulso/v1/common.proto";
+
+enum ProcessingMode {
+  PROCESSING_MODE_UNSPECIFIED = 0;
+  PROCESSING_MODE_MAIN_THREAD = 1;
+  PROCESSING_MODE_WEB_WORKER = 2;
+}
+
+message Statement {
+  string id = 1;
+  string bank_account_id = 2;
+  string file_name = 3;
+  string period_start = 4;
+  string period_end = 5;
+  int64 opening_balance_cents = 6;
+  int64 closing_balance_cents = 7;
+  StatementStatus status = 8;
+  optional string failure_reason = 9;
+  int32 transaction_count = 10;
+}
+
+message ExtractedTransaction {
+  string occurred_on = 1;
+  string description = 2;
+  TransactionType type = 3;
+  int64 amount_cents = 4;
+}
+
+message ClientProcessingMetrics {
+  ProcessingMode mode = 1;
+  int32 upload_ms = 2;
+  int32 processing_ms = 3;
+  optional int64 memory_bytes = 4;
+}
+
+message UploadStatementRequest {
+  string bank_account_id = 1;
+  string file_name = 2;
+  // SHA-256 of the PDF, computed in the browser; the file itself is never uploaded.
+  string file_hash = 3;
+  string period_start = 4;
+  string period_end = 5;
+  int64 opening_balance_cents = 6;
+  int64 closing_balance_cents = 7;
+  repeated ExtractedTransaction transactions = 8;
+  ClientProcessingMetrics metrics = 9;
+}
+
+message UploadStatementResponse {
+  Statement statement = 1;
+}
+
+message ListStatementsRequest {
+  optional string bank_account_id = 1;
+  PageRequest page = 2;
+}
+
+message ListStatementsResponse {
+  repeated Statement statements = 1;
+  PageResponse page = 2;
+}
+
+message GetStatementRequest {
+  string id = 1;
+}
+
+message GetStatementResponse {
+  Statement statement = 1;
+}
+
+message ListTransactionsRequest {
+  optional string statement_id = 1;
+  optional string category_id = 2;
+  optional TransactionType type = 3;
+  optional string search = 4;
+  PageRequest page = 5;
+}
+
+message ListTransactionsResponse {
+  repeated Transaction transactions = 1;
+  PageResponse page = 2;
+}
+
+message UpdateTransactionCategoryRequest {
+  string transaction_id = 1;
+  string category_id = 2;
+}
+
+message UpdateTransactionCategoryResponse {
+  Transaction transaction = 1;
+}
+
+service StatementService {
+  rpc UploadStatement(UploadStatementRequest) returns (UploadStatementResponse);
+  rpc ListStatements(ListStatementsRequest) returns (ListStatementsResponse);
+  rpc GetStatement(GetStatementRequest) returns (GetStatementResponse);
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+  rpc UpdateTransactionCategory(UpdateTransactionCategoryRequest) returns (UpdateTransactionCategoryResponse);
+}
