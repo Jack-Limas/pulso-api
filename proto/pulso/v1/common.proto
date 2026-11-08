@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package pulso.v1;
+
+enum TransactionType {
+  TRANSACTION_TYPE_UNSPECIFIED = 0;
+  TRANSACTION_TYPE_INCOME = 1;
+  TRANSACTION_TYPE_EXPENSE = 2;
+}
+
+enum TransactionStatus {
+  TRANSACTION_STATUS_UNSPECIFIED = 0;
+  TRANSACTION_STATUS_NORMAL = 1;
+  TRANSACTION_STATUS_FLAGGED = 2;
+  TRANSACTION_STATUS_REVIEWED = 3;
+}
+
+enum CategorySource {
+  CATEGORY_SOURCE_UNSPECIFIED = 0;
+  CATEGORY_SOURCE_RULE = 1;
+  CATEGORY_SOURCE_AI = 2;
+  CATEGORY_SOURCE_USER = 3;
+}
+
+enum StatementStatus {
+  STATEMENT_STATUS_UNSPECIFIED = 0;
+  STATEMENT_STATUS_RECEIVED = 1;
+  STATEMENT_STATUS_PROCESSING = 2;
+  STATEMENT_STATUS_EXTRACTING = 3;
+  STATEMENT_STATUS_ANALYZING = 4;
+  STATEMENT_STATUS_COMPLETED = 5;
+  STATEMENT_STATUS_FAILED = 6;
+}
+
+message Category {
+  string id = 1;
+  string code = 2;
+  string color_hex = 3;
+}
+
+message Transaction {
+  string id = 1;
+  string statement_id = 2;
+  // ISO 8601 calendar date (YYYY-MM-DD).
+  string occurred_on = 3;
+  string description = 4;
+  string merchant = 5;
+  TransactionType type = 6;
+  int64 amount_cents = 7;
+  TransactionStatus status = 8;
+  optional Category category = 9;
+  optional CategorySource category_source = 10;
+}
+
+message PageRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message PageResponse {
+  string next_page_token = 1;
+  int32 total_count = 2;
+}
