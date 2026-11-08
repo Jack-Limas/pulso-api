@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+src/gen/
+
+.env
+.env.*
+!.env.example
+cookies.txt
+*.pem
+*.log
+.DS_Store
