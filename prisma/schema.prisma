@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AccountType {
+  SAVINGS
+  CHECKING
+  DIGITAL_WALLET
+}
+
+enum StatementStatus {
+  RECEIVED
+  PROCESSING
+  EXTRACTING
+  ANALYZING
+  COMPLETED
+  FAILED
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionStatus {
+  NORMAL
+  FLAGGED
+  REVIEWED
+}
+
+enum CategorySource {
+  RULE
+  AI
+  USER
+}
+
+enum AnalysisKind {
+  ANOMALY
+  RECURRING
+  ANT_EXPENSE
+  FORECAST
+  RECOMMENDATION
+}
+
+enum ProcessingMode {
+  MAIN_THREAD
+  WEB_WORKER
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         Role     @default(USER)
+  locale       String   @default("es")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bankAccounts  BankAccount[]
+  refreshTokens RefreshToken[]
+  merchantRules MerchantRule[]
+  auditLogs     AuditLog[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model SupportedBank {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  bankAccounts BankAccount[]
+}
+
+model BankAccount {
+  id              String      @id @default(uuid()) @db.Uuid
+  userId          String      @db.Uuid
+  supportedBankId String      @db.Uuid
+  alias           String
+  type            AccountType
+  lastFourDigits  String?     @db.VarChar(4)
+  createdAt       DateTime    @default(now())
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bank       SupportedBank   @relation(fields: [supportedBankId], references: [id])
+  statements BankStatement[]
+
+  @@index([userId])
+}
+
+model BankStatement {
+  id                  String          @id @default(uuid()) @db.Uuid
+  bankAccountId       String          @db.Uuid
+  fileName            String
+  fileHash            String          @db.Char(64)
+  periodStart         DateTime        @db.Date
+  periodEnd           DateTime        @db.Date
+  openingBalanceCents BigInt
+  closingBalanceCents BigInt
+  status              StatementStatus @default(RECEIVED)
+  failureReason       String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  bankAccount      BankAccount       @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  transactions     Transaction[]
+  analysisResults  AnalysisResult[]
+  processingMetric ProcessingMetric?
+
+  @@unique([bankAccountId, fileHash])
+  @@index([bankAccountId, periodEnd])
+}
+
+model Category {
+  id        String  @id @default(uuid()) @db.Uuid
+  code      String  @unique
+  colorHex  String  @db.Char(7)
+  isDefault Boolean @default(false)
+
+  transactions  Transaction[]
+  merchantRules MerchantRule[]
+}
+
+model MerchantRule {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String?        @db.Uuid
+  pattern    String
+  categoryId String         @db.Uuid
+  source     CategorySource
+  createdAt  DateTime       @default(now())
+
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, pattern])
+  @@index([pattern])
+}
+
+model Transaction {
+  id             String            @id @default(uuid()) @db.Uuid
+  statementId    String            @db.Uuid
+  categoryId     String?           @db.Uuid
+  occurredOn     DateTime          @db.Date
+  description    String
+  merchant       String
+  type           TransactionType
+  amountCents    BigInt
+  status         TransactionStatus @default(NORMAL)
+  categorySource CategorySource?
+  createdAt      DateTime          @default(now())
+
+  statement BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  category  Category?     @relation(fields: [categoryId], references: [id])
+
+  @@index([statementId, occurredOn])
+  @@index([categoryId])
+  @@index([merchant])
+}
+
+model AnalysisResult {
+  id          String       @id @default(uuid()) @db.Uuid
+  statementId String       @db.Uuid
+  kind        AnalysisKind
+  payload     Json
+  createdAt   DateTime     @default(now())
+
+  statement BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  @@index([statementId, kind])
+}
+
+model ProcessingMetric {
+  id               String         @id @default(uuid()) @db.Uuid
+  statementId      String         @unique @db.Uuid
+  mode             ProcessingMode
+  uploadMs         Int
+  processingMs     Int
+  transactionCount Int
+  memoryBytes      BigInt?
+  createdAt        DateTime       @default(now())
+
+  statement BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
