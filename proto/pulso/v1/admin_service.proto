@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package pulso.v1;
+
+import "pulso/v1/auth_service.proto";
+import "pulso/v1/common.proto";
+
+message BroadcastAnnouncementRequest {
+  string title = 1;
+  string body = 2;
+}
+
+message BroadcastAnnouncementResponse {}
+
+message ListUsersRequest {
+  PageRequest page = 1;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  PageResponse page = 2;
+}
+
+message UpsertMerchantRuleRequest {
+  string pattern = 1;
+  string category_id = 2;
+}
+
+message UpsertMerchantRuleResponse {
+  string id = 1;
+}
+
+message GetPlatformMetricsRequest {}
+
+message GetPlatformMetricsResponse {
+  int32 connected_users = 1;
+  int32 active_connections = 2;
+  int32 statements_processed = 3;
+  int64 transactions_processed = 4;
+  int32 average_processing_ms_worker = 5;
+  int32 average_processing_ms_main_thread = 6;
+}
+
+service AdminService {
+  rpc BroadcastAnnouncement(BroadcastAnnouncementRequest) returns (BroadcastAnnouncementResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc UpsertMerchantRule(UpsertMerchantRuleRequest) returns (UpsertMerchantRuleResponse);
+  rpc GetPlatformMetrics(GetPlatformMetricsRequest) returns (GetPlatformMetricsResponse);
+}
