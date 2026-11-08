@@ -1,0 +1,37 @@
+{
+  "name": "pulso-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "generate": "buf generate",
+    "build": "npm run generate && tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint:proto": "buf lint"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.17.0",
+    "@connectrpc/connect": "^2.3.0",
+    "@connectrpc/connect-fastify": "^2.3.0",
+    "@connectrpc/connect-node": "^2.3.0",
+    "@fastify/cors": "^11.4.1",
+    "@prisma/client": "^6.19.3",
+    "fastify": "^5.12.8",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "^1.75.0",
+    "@bufbuild/protoc-gen-es": "^2.17.0",
+    "@types/node": "^22.20.5",
+    "prisma": "^6.19.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
