@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package pulso.v1;
+
+message CategoryTotal {
+  string category_code = 1;
+  int64 total_cents = 2;
+}
+
+message Anomaly {
+  string transaction_id = 1;
+  string description = 2;
+  int64 amount_cents = 3;
+  string reason = 4;
+}
+
+message RecurringExpense {
+  string merchant = 1;
+  int64 average_cents = 2;
+  int32 interval_days = 3;
+  int32 occurrences = 4;
+}
+
+message AntExpense {
+  string merchant = 1;
+  string category_code = 2;
+  int32 count = 3;
+  int64 total_cents = 4;
+  int64 average_cents = 5;
+  string period_start = 6;
+  string period_end = 7;
+}
+
+message LiquidityForecast {
+  int64 current_cents = 1;
+  int64 expected_income_cents = 2;
+  int64 expected_expense_cents = 3;
+  int64 projected_cents = 4;
+  // Daily balance change in cents; negative means the balance is falling.
+  int64 daily_trend_cents = 5;
+}
+
+message Recommendation {
+  string title = 1;
+  string detail = 2;
+}
+
+message GetDashboardRequest {
+  optional string bank_account_id = 1;
+  optional string statement_id = 2;
+}
+
+message GetDashboardResponse {
+  int64 balance_cents = 1;
+  int64 income_cents = 2;
+  int64 expense_cents = 3;
+  repeated CategoryTotal category_totals = 4;
+  repeated Anomaly anomalies = 5;
+  repeated RecurringExpense recurring_expenses = 6;
+  repeated AntExpense ant_expenses = 7;
+  LiquidityForecast forecast = 8;
+  repeated Recommendation recommendations = 9;
+}
+
+service InsightsService {
+  rpc GetDashboard(GetDashboardRequest) returns (GetDashboardResponse);
+}
