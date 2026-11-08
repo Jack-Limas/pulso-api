@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package pulso.v1;
+
+enum AccountType {
+  ACCOUNT_TYPE_UNSPECIFIED = 0;
+  ACCOUNT_TYPE_SAVINGS = 1;
+  ACCOUNT_TYPE_CHECKING = 2;
+  ACCOUNT_TYPE_DIGITAL_WALLET = 3;
+}
+
+message SupportedBank {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+}
+
+message BankAccount {
+  string id = 1;
+  SupportedBank bank = 2;
+  string alias = 3;
+  AccountType type = 4;
+  optional string last_four_digits = 5;
+}
+
+message ListSupportedBanksRequest {}
+
+message ListSupportedBanksResponse {
+  repeated SupportedBank banks = 1;
+}
+
+message ListBankAccountsRequest {}
+
+message ListBankAccountsResponse {
+  repeated BankAccount accounts = 1;
+}
+
+message CreateBankAccountRequest {
+  string supported_bank_id = 1;
+  string alias = 2;
+  AccountType type = 3;
+  optional string last_four_digits = 4;
+}
+
+message CreateBankAccountResponse {
+  BankAccount account = 1;
+}
+
+message DeleteBankAccountRequest {
+  string id = 1;
+}
+
+message DeleteBankAccountResponse {}
+
+service BankAccountService {
+  rpc ListSupportedBanks(ListSupportedBanksRequest) returns (ListSupportedBanksResponse);
+  rpc ListBankAccounts(ListBankAccountsRequest) returns (ListBankAccountsResponse);
+  rpc CreateBankAccount(CreateBankAccountRequest) returns (CreateBankAccountResponse);
+  rpc DeleteBankAccount(DeleteBankAccountRequest) returns (DeleteBankAccountResponse);
+}
