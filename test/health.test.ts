@@ -12,6 +12,8 @@ describe("GET /health", () => {
       INSTANCE_ID: "test-a",
       DATABASE_URL: "postgresql://unused",
       REDIS_URL: "redis://unused",
+      AI_SERVICE_URL: "http://unused.test",
+      AI_INTERNAL_KEY: "test-key-with-at-least-32-characters",
       JWT_ACCESS_SECRET: "test-secret-with-at-least-32-characters",
     });
     app = await buildApp({ env, routes: () => undefined, interceptors: [] });
