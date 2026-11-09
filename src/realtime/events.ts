@@ -1,7 +1,9 @@
+import type { AnalysisStageName } from "../modules/analysis/analysis.types.js";
 import type { StatementState } from "../modules/statements/statement.types.js";
 
 export type RealtimeEvent =
   | { type: "statement.status"; statementId: string; status: StatementState; failureReason?: string }
+  | { type: "statement.stage"; statementId: string; stage: AnalysisStageName }
   | { type: "transaction.updated"; transactionId: string }
   | { type: "announcement"; title: string; body: string };
 
