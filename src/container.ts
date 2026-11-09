@@ -13,7 +13,9 @@ import { RefreshCookie } from "./modules/auth/refresh-cookie.js";
 import { createBankAccountHandlers } from "./modules/bank-accounts/bank-account.handlers.js";
 import { PrismaBankAccountRepository } from "./modules/bank-accounts/bank-account.repository.js";
 import { BankAccountService } from "./modules/bank-accounts/bank-account.service.js";
-import { DeferredAnalyzer } from "./modules/statements/deferred.analyzer.js";
+import { AnalysisEngineClient } from "./modules/analysis/analysis-engine.client.js";
+import { PrismaAnalysisRepository } from "./modules/analysis/analysis.repository.js";
+import { RemoteAnalyzer } from "./modules/analysis/remote.analyzer.js";
 import { createStatementHandlers } from "./modules/statements/statement.handlers.js";
 import { type StatementJob, StatementProcessor } from "./modules/statements/statement.processor.js";
 import { PrismaStatementRepository } from "./modules/statements/statement.repository.js";
@@ -58,7 +60,16 @@ export function createContainer(env: Env, logUnexpected: ErrorLogger) {
   const statementRepository = new PrismaStatementRepository(prisma);
   const processor = new StatementProcessor(
     statementRepository,
-    new DeferredAnalyzer(),
+    new RemoteAnalyzer(
+      new PrismaAnalysisRepository(prisma),
+      new AnalysisEngineClient({
+        baseUrl: env.AI_SERVICE_URL,
+        transport: env.AI_TRANSPORT,
+        internalKey: env.AI_INTERNAL_KEY,
+        timeoutMs: env.AI_TIMEOUT_MS,
+      }),
+      realtime,
+    ),
     realtime,
     logUnexpected,
   );
