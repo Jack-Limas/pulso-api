@@ -62,5 +62,5 @@ export interface StatementRepository {
 }
 
 export interface StatementAnalyzer {
-  analyze(statementId: string): Promise<void>;
+  analyze(statementId: string, userId: string): Promise<void>;
 }

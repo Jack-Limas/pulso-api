@@ -20,7 +20,7 @@ export class StatementProcessor {
     try {
       await this.transition(job, "PROCESSING");
       await this.transition(job, "ANALYZING");
-      await this.analyzer.analyze(job.statementId);
+      await this.analyzer.analyze(job.statementId, job.userId);
       await this.transition(job, "COMPLETED");
     } catch (error) {
       this.logError(error);
