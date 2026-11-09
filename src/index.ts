@@ -5,12 +5,13 @@ import { createContainer } from "./container.js";
 const env = loadEnv();
 const container = createContainer(env, (error) => console.error(error));
 const app = await buildApp({ env, routes: container.routes, interceptors: container.interceptors });
+await container.realtime.start(app.server);
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {
-    void app
+    void container
       .close()
-      .then(container.close)
+      .then(() => app.close())
       .then(() => process.exit(0));
   });
 }
