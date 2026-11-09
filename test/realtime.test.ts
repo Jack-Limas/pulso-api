@@ -93,9 +93,9 @@ describe("RealtimeGateway", () => {
   }
 
   async function connect(instance: Instance, userId: string): Promise<Client> {
+    const token = await accessTokens.issue({ id: userId, role: "USER" });
     const socket = open(instance.url);
     const received: { type: string }[] = [];
-    const token = await accessTokens.issue({ id: userId, role: "USER" });
     await new Promise<void>((resolve, reject) => {
       socket.once("error", reject);
       socket.once("open", () => socket.send(JSON.stringify({ type: "auth", token })));
