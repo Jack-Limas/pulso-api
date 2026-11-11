@@ -37,6 +37,7 @@ export interface TransactionRepository {
     window: PageWindow,
   ): Promise<Page<TransactionRecord>>;
   findOwned(userId: string, id: string): Promise<TransactionRecord | null>;
+  listCategories(): Promise<CategoryRecord[]>;
   categoryExists(id: string): Promise<boolean>;
   assignCategory(
     userId: string,

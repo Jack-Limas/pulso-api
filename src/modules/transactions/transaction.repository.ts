@@ -64,6 +64,13 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return row && toRecord(row);
   }
 
+  listCategories() {
+    return this.prisma.category.findMany({
+      select: { id: true, code: true, colorHex: true },
+      orderBy: { code: "asc" },
+    });
+  }
+
   async categoryExists(id: string): Promise<boolean> {
     return (await this.prisma.category.count({ where: { id } })) > 0;
   }

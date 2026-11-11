@@ -3,6 +3,7 @@ import type { EventPublisher } from "../../realtime/events.js";
 import { AppError } from "../../shared/errors.js";
 import type { Page, PageWindow } from "../../shared/pagination.js";
 import type {
+  CategoryRecord,
   TransactionFilter,
   TransactionRecord,
   TransactionRepository,
@@ -27,6 +28,10 @@ export class TransactionService {
     window: PageWindow,
   ): Promise<Page<TransactionRecord>> {
     return this.transactions.listOwned(userId, filterSchema.parse(filter), window);
+  }
+
+  listCategories(): Promise<CategoryRecord[]> {
+    return this.transactions.listCategories();
   }
 
   async updateCategory(

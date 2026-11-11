@@ -125,6 +125,9 @@ export function createStatementHandlers(
         page: toPageResponse(window, page.total),
       };
     },
+    async listCategories() {
+      return { categories: await transactions.listCategories() };
+    },
     async updateTransactionCategory(request, context) {
       const transaction = await transactions.updateCategory(
         requireUser(context).id,
