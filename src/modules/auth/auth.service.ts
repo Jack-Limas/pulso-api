@@ -67,11 +67,16 @@ export class AuthService {
     if (!stored) {
       throw new AppError("UNAUTHENTICATED", INVALID_SESSION);
     }
-    const sinceRevoked = stored.revokedAt ? Date.now() - stored.revokedAt.getTime() : undefined;
-    if (sinceRevoked !== undefined && sinceRevoked > ROTATION_GRACE_MS) {
-      // A rotated token came back long after: it was stolen or replayed, so end every session.
-      await this.refreshTokens.revokeAllForUser(stored.userId);
-      throw new AppError("UNAUTHENTICATED", INVALID_SESSION);
+    if (stored.revokedAt) {
+      const sinceRotation = stored.rotatedAt ? Date.now() - stored.rotatedAt.getTime() : undefined;
+      if (sinceRotation === undefined) {
+        throw new AppError("UNAUTHENTICATED", INVALID_SESSION);
+      }
+      if (sinceRotation > ROTATION_GRACE_MS) {
+        // A rotated token came back long after: it was stolen or replayed, so end every session.
+        await this.refreshTokens.revokeAllForUser(stored.userId);
+        throw new AppError("UNAUTHENTICATED", INVALID_SESSION);
+      }
     }
     if (stored.expiresAt.getTime() <= Date.now()) {
       throw new AppError("UNAUTHENTICATED", INVALID_SESSION);
@@ -81,7 +86,7 @@ export class AuthService {
       throw new AppError("UNAUTHENTICATED", INVALID_SESSION);
     }
     if (!stored.revokedAt) {
-      await this.refreshTokens.revoke(stored.id);
+      await this.refreshTokens.revoke(stored.id, "rotated");
     }
     return this.openSession(user);
   }
@@ -92,7 +97,7 @@ export class AuthService {
     }
     const stored = await this.refreshTokens.findByHash(hashRefreshToken(refreshToken));
     if (stored && !stored.revokedAt) {
-      await this.refreshTokens.revoke(stored.id);
+      await this.refreshTokens.revoke(stored.id, "logout");
     }
   }
 

@@ -26,6 +26,7 @@ export interface RefreshTokenRecord {
   userId: string;
   expiresAt: Date;
   revokedAt: Date | null;
+  rotatedAt: Date | null;
 }
 
 export interface UserRepository {
@@ -37,7 +38,7 @@ export interface UserRepository {
 export interface RefreshTokenRepository {
   create(userId: string, tokenHash: string, expiresAt: Date): Promise<void>;
   findByHash(tokenHash: string): Promise<RefreshTokenRecord | null>;
-  revoke(id: string): Promise<void>;
+  revoke(id: string, reason: "rotated" | "logout"): Promise<void>;
   revokeAllForUser(userId: string): Promise<void>;
 }
 

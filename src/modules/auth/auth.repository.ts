@@ -47,8 +47,12 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
     return this.prisma.refreshToken.findUnique({ where: { tokenHash } });
   }
 
-  async revoke(id: string): Promise<void> {
-    await this.prisma.refreshToken.update({ where: { id }, data: { revokedAt: new Date() } });
+  async revoke(id: string, reason: "rotated" | "logout"): Promise<void> {
+    const now = new Date();
+    await this.prisma.refreshToken.update({
+      where: { id },
+      data: { revokedAt: now, rotatedAt: reason === "rotated" ? now : null },
+    });
   }
 
   async revokeAllForUser(userId: string): Promise<void> {
