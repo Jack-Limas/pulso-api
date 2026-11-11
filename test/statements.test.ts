@@ -184,6 +184,12 @@ describe("statements and transactions", () => {
     );
   });
 
+  it("lists the categories a user can pick", async () => {
+    const { categories } = await harness.statementClient.listCategories({}, token);
+
+    expect(categories.map((category) => category.code)).toEqual(["food"]);
+  });
+
   it("rejects an unknown category", async () => {
     await upload();
     const { transactions } = await harness.statementClient.listTransactions({}, token);

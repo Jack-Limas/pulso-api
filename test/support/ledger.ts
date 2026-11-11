@@ -121,6 +121,10 @@ export class InMemoryLedger implements StatementRepository, TransactionRepositor
     }
   }
 
+  async listCategories(): Promise<CategoryRecord[]> {
+    return [this.category];
+  }
+
   async categoryExists(id: string): Promise<boolean> {
     return id === this.category.id;
   }
