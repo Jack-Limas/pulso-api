@@ -22,7 +22,11 @@ export class RecordingPublisher implements EventPublisher {
     this.toUser.push({ userId, event });
   }
 
-  async broadcast(): Promise<void> {}
+  readonly broadcasts: RealtimeEvent[] = [];
+
+  async broadcast(event: RealtimeEvent): Promise<void> {
+    this.broadcasts.push(event);
+  }
 
   statuses(): string[] {
     return this.toUser.flatMap(({ event }) =>

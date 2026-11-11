@@ -17,6 +17,13 @@ import { TransactionService } from "../../src/modules/transactions/transaction.s
 import { createRoutes } from "../../src/rpc/routes.js";
 import { ProcessingQueue } from "../../src/shared/processing-queue.js";
 import { FakeHasher, InMemoryBankAccounts, InMemoryRefreshTokens, InMemoryUsers } from "./fakes.js";
+import { AdminService as AdminContract } from "../../src/gen/pulso/v1/admin_service_pb.js";
+import { InsightsService as InsightsContract } from "../../src/gen/pulso/v1/insights_service_pb.js";
+import { createAdminHandlers } from "../../src/modules/admin/admin.handlers.js";
+import { AdminService } from "../../src/modules/admin/admin.service.js";
+import { createInsightsHandlers } from "../../src/modules/insights/insights.handlers.js";
+import { InsightsService } from "../../src/modules/insights/insights.service.js";
+import { FakeAdmin, FakeInsights, FakePresence } from "./admin-fakes.js";
 import { InMemoryLedger, RecordingPublisher, SwitchableAnalyzer } from "./ledger.js";
 
 const TEST_SECRET = "test-secret-with-at-least-32-characters";
@@ -35,10 +42,15 @@ export function createHarness() {
   const queue = new ProcessingQueue<StatementJob>((job) => processor.process(job), 2, silent);
   const statements = new StatementService(ledger, events, (job) => queue.enqueue(job));
   const transactions = new TransactionService(ledger, events);
+  const adminRepository = new FakeAdmin();
+  const presence = new FakePresence();
+  const insightsRepository = new FakeInsights();
   const routes = createRoutes({
     auth: createAuthHandlers(auth, new RefreshCookie(false, 30)),
     bankAccounts: createBankAccountHandlers(new BankAccountService(bankAccountsRepository)),
     statements: createStatementHandlers(statements, transactions),
+    insights: createInsightsHandlers(new InsightsService(insightsRepository)),
+    admin: createAdminHandlers(new AdminService(adminRepository, events, presence)),
   });
   const transport = createRouterTransport(routes, {
     router: {
@@ -59,6 +71,12 @@ export function createHarness() {
     analyzer,
     queue,
     statementClient: createClient(StatementContract, transport),
+    adminClient: createClient(AdminContract, transport),
+    insightsClient: createClient(InsightsContract, transport),
+    adminRepository,
+    presence,
+    insightsRepository,
+    accessTokens,
     authClient: createClient(AuthContract, transport),
     bankAccountClient: createClient(BankAccountContract, transport),
   };
