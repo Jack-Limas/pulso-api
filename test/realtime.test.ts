@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 import { JwtIssuer } from "../src/modules/auth/jwt.issuer.js";
 import type { Backplane, BackplaneListener } from "../src/realtime/backplane.js";
+import type { PresenceSnapshot, PresenceStore } from "../src/realtime/presence.js";
 import { RealtimeGateway } from "../src/realtime/realtime.gateway.js";
 
 const ORIGIN = "https://pulso.test";
@@ -51,6 +52,18 @@ class HubNode implements Backplane {
   }
 }
 
+class MemoryPresence implements PresenceStore {
+  readonly snapshots = new Map<string, PresenceSnapshot>();
+
+  async report(snapshot: PresenceSnapshot): Promise<void> {
+    this.snapshots.set(snapshot.instanceId, snapshot);
+  }
+
+  async readAll(): Promise<PresenceSnapshot[]> {
+    return [...this.snapshots.values()];
+  }
+}
+
 interface Instance {
   gateway: RealtimeGateway;
   node: HubNode;
@@ -67,6 +80,7 @@ const ANNOUNCEMENT = { type: "announcement", title: "Gol", body: "Colombia" } as
 
 describe("RealtimeGateway", () => {
   let hub: Hub;
+  let presence: MemoryPresence;
   let instanceA: Instance;
   let instanceB: Instance;
   const clients: WebSocket[] = [];
@@ -75,8 +89,14 @@ describe("RealtimeGateway", () => {
     const node = new HubNode(hub);
     const gateway = new RealtimeGateway(
       node,
+      presence,
       accessTokens,
-      { allowedOrigins: [ORIGIN], authTimeoutMs, heartbeatMs: 60_000 },
+      {
+        instanceId: `instance-${hub.nodes.size}`,
+        allowedOrigins: [ORIGIN],
+        authTimeoutMs,
+        heartbeatMs: 60_000,
+      },
       () => undefined,
     );
     const server = createServer();
@@ -117,6 +137,7 @@ describe("RealtimeGateway", () => {
 
   beforeEach(async () => {
     hub = new Hub();
+    presence = new MemoryPresence();
     instanceA = await startInstance();
     instanceB = await startInstance();
   });
@@ -185,6 +206,18 @@ describe("RealtimeGateway", () => {
     second.socket.close();
     await flush();
     expect(instanceA.node.channels.has(channel)).toBe(false);
+  });
+
+  it("reports who is connected on each instance", async () => {
+    await connect(instanceA, "user-1");
+    await connect(instanceA, "user-1");
+    await connect(instanceB, "user-2");
+    await flush();
+
+    const snapshots = await presence.readAll();
+
+    expect(snapshots.map((s) => s.connections).sort()).toEqual([1, 2]);
+    expect(snapshots.flatMap((s) => s.userIds).sort()).toEqual(["user-1", "user-2"]);
   });
 
   it("closes a connection with an invalid token", async () => {
