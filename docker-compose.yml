@@ -1,3 +1,7 @@
+# Development: `docker compose up -d` starts only PostgreSQL and Redis.
+# Full demo: `docker compose --profile demo up -d --build` adds the AI service over native gRPC,
+# two API instances and nginx in front of them. It expects pulso-ai cloned next to this repo
+# and the secrets below in a local .env file.
 services:
   postgres:
     image: postgres:17-alpine
@@ -24,6 +28,52 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+
+  ai:
+    profiles: [demo]
+    build: ../pulso-ai
+    environment:
+      PORT: "50051"
+      INTERNAL_API_KEY: ${AI_INTERNAL_KEY:?set AI_INTERNAL_KEY in .env}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+  api-a: &api
+    profiles: [demo]
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai:
+        condition: service_started
+    environment: &api-env
+      INSTANCE_ID: api-a
+      PORT: "8080"
+      DATABASE_URL: postgresql://pulso:pulso@postgres:5432/pulso
+      DIRECT_DATABASE_URL: postgresql://pulso:pulso@postgres:5432/pulso
+      REDIS_URL: redis://redis:6379
+      AI_SERVICE_URL: http://ai:50051
+      AI_TRANSPORT: grpc
+      AI_INTERNAL_KEY: ${AI_INTERNAL_KEY:?set AI_INTERNAL_KEY in .env}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      NODE_ENV: development
+
+  api-b:
+    <<: *api
+    environment:
+      <<: *api-env
+      INSTANCE_ID: api-b
+
+  nginx:
+    profiles: [demo]
+    image: nginx:1.29-alpine
+    depends_on: [api-a, api-b]
+    ports:
+      - "8080:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
 
 volumes:
   postgres-data:
