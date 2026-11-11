@@ -102,9 +102,23 @@ describe("AuthService", () => {
     expect(harness.refreshTokens.activeCount()).toBe(1);
   });
 
-  it("ends every session when a rotated token is replayed", async () => {
+  it("accepts the same token twice within the grace period", async () => {
     const { cookie } = await registerAndCaptureCookie();
     await harness.authClient.refreshSession({}, { headers: { cookie } });
+
+    const second = await harness.authClient.refreshSession({}, { headers: { cookie } });
+
+    expect(second.accessToken).not.toBe("");
+  });
+
+  it("ends every session when a rotated token is replayed later", async () => {
+    const { cookie } = await registerAndCaptureCookie();
+    await harness.authClient.refreshSession({}, { headers: { cookie } });
+    for (const token of harness.refreshTokens.byHash.values()) {
+      if (token.revokedAt) {
+        token.revokedAt = new Date(Date.now() - 60_000);
+      }
+    }
 
     await expectCode(
       harness.authClient.refreshSession({}, { headers: { cookie } }),
