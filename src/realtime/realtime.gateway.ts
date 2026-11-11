@@ -5,6 +5,7 @@ import type { AccessTokenIssuer } from "../modules/auth/auth.types.js";
 import type { Backplane } from "./backplane.js";
 import { ConnectionRegistry } from "./connection-registry.js";
 import type { EventPublisher, RealtimeEvent } from "./events.js";
+import type { PresenceStore } from "./presence.js";
 
 const WS_PATH = "/ws";
 const BROADCAST_CHANNEL = "pulso:broadcast";
@@ -12,8 +13,10 @@ const USER_CHANNEL_PREFIX = "pulso:user:";
 const CLOSE_UNAUTHORIZED = 4401;
 const MAX_INCOMING_BYTES = 16 * 1024;
 const MAX_BUFFERED_BYTES = 1024 * 1024;
+const PRESENCE_TTL_HEARTBEATS = 3;
 
 export interface GatewayOptions {
+  instanceId: string;
   allowedOrigins: string[];
   authTimeoutMs: number;
   heartbeatMs: number;
@@ -29,6 +32,7 @@ export class RealtimeGateway implements EventPublisher {
 
   constructor(
     private readonly backplane: Backplane,
+    private readonly presence: PresenceStore,
     private readonly accessTokens: AccessTokenIssuer,
     private readonly options: GatewayOptions,
     private readonly logError: (error: unknown) => void,
@@ -38,7 +42,10 @@ export class RealtimeGateway implements EventPublisher {
     this.backplane.onMessage((channel, message) => this.deliver(channel, message));
     await this.backplane.subscribe(BROADCAST_CHANNEL);
     httpServer.on("upgrade", (request, socket, head) => this.upgrade(request, socket, head));
-    this.heartbeat = setInterval(() => this.checkHeartbeats(), this.options.heartbeatMs);
+    this.heartbeat = setInterval(() => {
+      this.checkHeartbeats();
+      void this.reportPresence();
+    }, this.options.heartbeatMs);
     this.heartbeat.unref();
   }
 
@@ -109,6 +116,7 @@ export class RealtimeGateway implements EventPublisher {
     if (this.registry.add(user.id, socket)) {
       await this.backplane.subscribe(userChannel(user.id));
     }
+    void this.reportPresence();
     socket.send(JSON.stringify({ type: "ready" }));
   }
 
@@ -117,6 +125,7 @@ export class RealtimeGateway implements EventPublisher {
       if (this.registry.remove(userId, socket)) {
         await this.backplane.unsubscribe(userChannel(userId));
       }
+      await this.reportPresence();
     } catch (error) {
       this.logError(error);
     }
@@ -142,6 +151,22 @@ export class RealtimeGateway implements EventPublisher {
       return;
     }
     socket.send(message);
+  }
+
+  // Expires after a few missed heartbeats, so a crashed instance stops counting.
+  private async reportPresence(): Promise<void> {
+    try {
+      await this.presence.report(
+        {
+          instanceId: this.options.instanceId,
+          connections: this.registry.connectionCount(),
+          userIds: this.registry.userIds(),
+        },
+        Math.ceil((this.options.heartbeatMs * PRESENCE_TTL_HEARTBEATS) / 1000),
+      );
+    } catch (error) {
+      this.logError(error);
+    }
   }
 
   private checkHeartbeats(): void {
