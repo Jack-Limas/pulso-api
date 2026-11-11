@@ -19,14 +19,6 @@ const BANKS = [
   { code: "cooperativa-sur", name: "Cooperativa Sur" },
 ];
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} is required to seed the database`);
-  }
-  return value;
-}
-
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
@@ -44,8 +36,13 @@ async function main(): Promise<void> {
       create: bank,
     });
   }
-  const email = requireEnv("SEED_ADMIN_EMAIL").toLowerCase();
-  const passwordHash = await new Argon2Hasher().hash(requireEnv("SEED_ADMIN_PASSWORD"));
+  const email = process.env["SEED_ADMIN_EMAIL"]?.toLowerCase();
+  const password = process.env["SEED_ADMIN_PASSWORD"];
+  if (!email || !password) {
+    console.warn("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD are not set; skipping the admin user");
+    return;
+  }
+  const passwordHash = await new Argon2Hasher().hash(password);
   await prisma.user.upsert({
     where: { email },
     update: { role: "ADMIN", passwordHash },
