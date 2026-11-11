@@ -85,6 +85,12 @@ message ListTransactionsResponse {
   PageResponse page = 2;
 }
 
+message ListCategoriesRequest {}
+
+message ListCategoriesResponse {
+  repeated Category categories = 1;
+}
+
 message UpdateTransactionCategoryRequest {
   string transaction_id = 1;
   string category_id = 2;
@@ -99,5 +105,6 @@ service StatementService {
   rpc ListStatements(ListStatementsRequest) returns (ListStatementsResponse);
   rpc GetStatement(GetStatementRequest) returns (GetStatementResponse);
   rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
   rpc UpdateTransactionCategory(UpdateTransactionCategoryRequest) returns (UpdateTransactionCategoryResponse);
 }
