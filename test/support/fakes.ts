@@ -46,17 +46,24 @@ export class InMemoryRefreshTokens implements RefreshTokenRepository {
   readonly byHash = new Map<string, RefreshTokenRecord>();
 
   async create(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
-    this.byHash.set(tokenHash, { id: randomUUID(), userId, expiresAt, revokedAt: null });
+    this.byHash.set(tokenHash, {
+      id: randomUUID(),
+      userId,
+      expiresAt,
+      revokedAt: null,
+      rotatedAt: null,
+    });
   }
 
   async findByHash(tokenHash: string): Promise<RefreshTokenRecord | null> {
     return this.byHash.get(tokenHash) ?? null;
   }
 
-  async revoke(id: string): Promise<void> {
+  async revoke(id: string, reason: "rotated" | "logout"): Promise<void> {
     for (const token of this.byHash.values()) {
       if (token.id === id) {
         token.revokedAt = new Date();
+        token.rotatedAt = reason === "rotated" ? token.revokedAt : null;
       }
     }
   }

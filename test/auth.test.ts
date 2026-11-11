@@ -115,8 +115,8 @@ describe("AuthService", () => {
     const { cookie } = await registerAndCaptureCookie();
     await harness.authClient.refreshSession({}, { headers: { cookie } });
     for (const token of harness.refreshTokens.byHash.values()) {
-      if (token.revokedAt) {
-        token.revokedAt = new Date(Date.now() - 60_000);
+      if (token.rotatedAt) {
+        token.rotatedAt = new Date(Date.now() - 60_000);
       }
     }
 
