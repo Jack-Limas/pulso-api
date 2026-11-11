@@ -5,7 +5,7 @@ import type { AuthService, AuthSession } from "./auth.service.js";
 import type { UserRecord } from "./auth.types.js";
 import type { RefreshCookie } from "./refresh-cookie.js";
 
-function toProtoUser(user: UserRecord) {
+export function toProtoUser(user: UserRecord) {
   return {
     id: user.id,
     email: user.email,
