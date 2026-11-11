@@ -33,7 +33,15 @@ export class ConnectionRegistry<TSocket> {
     }
   }
 
-  userCount(): number {
-    return this.socketsByUser.size;
+  userIds(): string[] {
+    return [...this.socketsByUser.keys()];
+  }
+
+  connectionCount(): number {
+    let total = 0;
+    for (const sockets of this.socketsByUser.values()) {
+      total += sockets.size;
+    }
+    return total;
   }
 }
