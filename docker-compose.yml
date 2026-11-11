@@ -37,12 +37,25 @@ services:
       INTERNAL_API_KEY: ${AI_INTERNAL_KEY:?set AI_INTERNAL_KEY in .env}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
 
-  api-a: &api
+  # Runs once, before either instance starts, so two instances never migrate at the same time.
+  migrate:
     profiles: [demo]
     build: .
+    command: ["npx", "prisma", "migrate", "deploy"]
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://pulso:pulso@postgres:5432/pulso
+      DIRECT_DATABASE_URL: postgresql://pulso:pulso@postgres:5432/pulso
+
+  api-a: &api
+    profiles: [demo]
+    build: .
+    command: ["node", "dist/index.js"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       ai:
