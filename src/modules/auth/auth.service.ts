@@ -12,6 +12,8 @@ import { generateRefreshToken, hashRefreshToken } from "./refresh-token.js";
 const MS_PER_DAY = 86_400_000;
 const INVALID_CREDENTIALS = "Invalid email or password";
 const INVALID_SESSION = "Invalid session";
+// Two tabs refreshing at once present the same token twice within milliseconds.
+const ROTATION_GRACE_MS = 10_000;
 
 export interface AuthSession {
   user: UserRecord;
@@ -65,8 +67,9 @@ export class AuthService {
     if (!stored) {
       throw new AppError("UNAUTHENTICATED", INVALID_SESSION);
     }
-    if (stored.revokedAt) {
-      // A rotated token came back: it was stolen or replayed, so end every session.
+    const sinceRevoked = stored.revokedAt ? Date.now() - stored.revokedAt.getTime() : undefined;
+    if (sinceRevoked !== undefined && sinceRevoked > ROTATION_GRACE_MS) {
+      // A rotated token came back long after: it was stolen or replayed, so end every session.
       await this.refreshTokens.revokeAllForUser(stored.userId);
       throw new AppError("UNAUTHENTICATED", INVALID_SESSION);
     }
@@ -77,7 +80,9 @@ export class AuthService {
     if (!user) {
       throw new AppError("UNAUTHENTICATED", INVALID_SESSION);
     }
-    await this.refreshTokens.revoke(stored.id);
+    if (!stored.revokedAt) {
+      await this.refreshTokens.revoke(stored.id);
+    }
     return this.openSession(user);
   }
 
