@@ -1,17 +1,12 @@
-import { Redis } from "ioredis";
+import type { Redis } from "ioredis";
 import type { Backplane, BackplaneListener } from "./backplane.js";
 
 export class RedisBackplane implements Backplane {
-  private readonly publisher: Redis;
   // A Redis connection in subscriber mode cannot run other commands, so each role has its own.
-  private readonly subscriber: Redis;
-
-  constructor(url: string, logError: (error: unknown) => void) {
-    this.publisher = new Redis(url);
-    this.subscriber = new Redis(url);
-    this.publisher.on("error", logError);
-    this.subscriber.on("error", logError);
-  }
+  constructor(
+    private readonly publisher: Redis,
+    private readonly subscriber: Redis,
+  ) {}
 
   async publish(channel: string, message: string): Promise<void> {
     await this.publisher.publish(channel, message);
