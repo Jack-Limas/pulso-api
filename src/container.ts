@@ -1,4 +1,5 @@
 import type { Interceptor } from "@connectrpc/connect";
+import { Redis } from "ioredis";
 import type { Env } from "./config/env.js";
 import { createPrismaClient } from "./db/prisma.js";
 import { Argon2Hasher } from "./modules/auth/argon2.hasher.js";
@@ -13,6 +14,12 @@ import { RefreshCookie } from "./modules/auth/refresh-cookie.js";
 import { createBankAccountHandlers } from "./modules/bank-accounts/bank-account.handlers.js";
 import { PrismaBankAccountRepository } from "./modules/bank-accounts/bank-account.repository.js";
 import { BankAccountService } from "./modules/bank-accounts/bank-account.service.js";
+import { createAdminHandlers } from "./modules/admin/admin.handlers.js";
+import { PrismaAdminRepository } from "./modules/admin/admin.repository.js";
+import { AdminService } from "./modules/admin/admin.service.js";
+import { createInsightsHandlers } from "./modules/insights/insights.handlers.js";
+import { PrismaInsightsRepository } from "./modules/insights/insights.repository.js";
+import { InsightsService } from "./modules/insights/insights.service.js";
 import { AnalysisEngineClient } from "./modules/analysis/analysis-engine.client.js";
 import { PrismaAnalysisRepository } from "./modules/analysis/analysis.repository.js";
 import { RemoteAnalyzer } from "./modules/analysis/remote.analyzer.js";
@@ -23,6 +30,7 @@ import { StatementService } from "./modules/statements/statement.service.js";
 import { PrismaTransactionRepository } from "./modules/transactions/transaction.repository.js";
 import { TransactionService } from "./modules/transactions/transaction.service.js";
 import { RealtimeGateway } from "./realtime/realtime.gateway.js";
+import { RedisPresenceStore } from "./realtime/presence.js";
 import { RedisBackplane } from "./realtime/redis.backplane.js";
 import { createAuthInterceptor } from "./rpc/auth.interceptor.js";
 import { createErrorInterceptor, type ErrorLogger } from "./rpc/error.interceptor.js";
@@ -36,10 +44,17 @@ const WS_HEARTBEAT_MS = 30_000;
 export function createContainer(env: Env, logUnexpected: ErrorLogger) {
   const prisma = createPrismaClient();
   const accessTokens = new JwtIssuer(env.JWT_ACCESS_SECRET, env.ACCESS_TOKEN_TTL_SECONDS);
+  const redis = new Redis(env.REDIS_URL);
+  const redisSubscriber = new Redis(env.REDIS_URL);
+  redis.on("error", logUnexpected);
+  redisSubscriber.on("error", logUnexpected);
+  const presence = new RedisPresenceStore(redis);
   const realtime = new RealtimeGateway(
-    new RedisBackplane(env.REDIS_URL, logUnexpected),
+    new RedisBackplane(redis, redisSubscriber),
+    presence,
     accessTokens,
     {
+      instanceId: env.INSTANCE_ID,
       allowedOrigins: env.CORS_ORIGINS,
       authTimeoutMs: WS_AUTH_TIMEOUT_MS,
       heartbeatMs: WS_HEARTBEAT_MS,
@@ -91,6 +106,10 @@ export function createContainer(env: Env, logUnexpected: ErrorLogger) {
     auth: createAuthHandlers(auth, cookie),
     bankAccounts: createBankAccountHandlers(bankAccounts),
     statements: createStatementHandlers(statements, transactions),
+    insights: createInsightsHandlers(new InsightsService(new PrismaInsightsRepository(prisma))),
+    admin: createAdminHandlers(
+      new AdminService(new PrismaAdminRepository(prisma), realtime, presence),
+    ),
   });
 
   return {
